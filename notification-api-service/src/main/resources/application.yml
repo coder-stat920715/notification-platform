@@ -1,0 +1,40 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: notification-api-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notify
+    username: notify
+    password: notify
+    hikari:
+      maximum-pool-size: 30
+      connection-timeout: 2000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      compression-type: lz4
+      properties:
+        enable.idempotence: true
+        linger.ms: 5
+notify:
+  services:
+    tracker-url: http://localhost:8086
+  outbox:
+    poll-ms: 50
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

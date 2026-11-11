@@ -1,0 +1,90 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: channel-workers-service
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    listener:
+      concurrency: 4
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      max-poll-records: 100
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.acme.notify.common.NotificationEvent
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: com.acme.notify.common
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        spring.json.add.type.headers: false
+notify:
+  providers:
+    mode: mock            # mock = log-only (no credentials). live = SendGrid/SES/Twilio/Infobip/FCM
+    mock-failure-rate: 0.0
+  retry:
+    attempts: 5
+  http:
+    connect-timeout-ms: 500
+    read-timeout-ms: 2500
+  services:
+    template-url: http://localhost:8083
+  webhook:
+    signing-secret: ${WEBHOOK_SIGNING_SECRET:dev-only-change-me}
+vendors:
+  email:
+    from: ${EMAIL_FROM:no-reply@example.com}
+  sendgrid:
+    api-key: ${SENDGRID_API_KEY:}
+  ses:
+    region: ${AWS_REGION:us-east-1}
+  twilio:
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    from: ${TWILIO_FROM:}
+    callback-base-url: ${TWILIO_CALLBACK_BASE_URL:http://localhost:8086}
+  infobip:
+    base-url: ${INFOBIP_BASE_URL:https://api.infobip.com}
+    api-key: ${INFOBIP_API_KEY:}
+    sender: ${INFOBIP_SENDER:ACME}
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 50
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+        ignore-exceptions:
+          - com.acme.notify.workers.PermanentDeliveryException
+    instances:
+      sendgrid: { base-config: default }
+      ses: { base-config: default }
+      twilio: { base-config: default }
+      infobip: { base-config: default }
+      fcm: { base-config: default }
+  bulkhead:
+    instances:
+      sendgrid: { max-concurrent-calls: 200, max-wait-duration: 50ms }
+      twilio: { max-concurrent-calls: 200, max-wait-duration: 50ms }
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers

@@ -1,0 +1,72 @@
+server:
+  port: 8084
+spring:
+  application:
+    name: dispatcher-service
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      lettuce:
+        pool:
+          max-active: 64
+          max-idle: 16
+  cache:
+    type: caffeine
+    cache-names: prefs,contacts
+    caffeine:
+      spec: maximumSize=200000,expireAfterWrite=60s
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: dispatcher
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      max-poll-records: 200
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.acme.notify.common.NotificationEvent
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: com.acme.notify.common
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      compression-type: lz4
+      properties:
+        enable.idempotence: true
+        linger.ms: 5
+        spring.json.add.type.headers: false
+notify:
+  services:
+    preference-url: http://localhost:8082
+  digest:
+    window: PT15M
+    poll-ms: 5000
+  kafka:
+    replicas: 1
+    partitions:
+      high: 6
+      medium: 6
+      batch: 12
+      channel: 6
+    concurrency:
+      high: 4
+      standard: 2
+resilience4j:
+  circuitbreaker:
+    instances:
+      preferences:
+        sliding-window-size: 50
+        minimum-number-of-calls: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

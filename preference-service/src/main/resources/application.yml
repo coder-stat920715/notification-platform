@@ -1,0 +1,22 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: preference-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notify
+    username: notify
+    password: notify
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+notify:
+  seed-demo-data: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

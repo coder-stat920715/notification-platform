@@ -1,0 +1,23 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: template-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notify
+    username: notify
+    password: notify
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  cache:
+    type: caffeine
+    cache-names: templates
+    caffeine:
+      spec: maximumSize=50000,expireAfterWrite=5m
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
